@@ -4,14 +4,14 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 
-// Classe principale du serveur
+// Serveur multi-clients pour AfricaCapital
 public class AfricaCapitalServer {
     private static final int PORT = 12345;
 
-    // Dictionnaire (capitales africaines)
+    // Dictionnaire des pays africains et leurs capitales
     private static final Map<String, String> capitals = new HashMap<>();
     static {
-        capitals.put("rdc", "Kinshasa");
+
         capitals.put("angola", "Luanda");
         capitals.put("cameroun", "Yaoundé");
         capitals.put("kenya", "Nairobi");
@@ -25,53 +25,49 @@ public class AfricaCapitalServer {
         capitals.put("sénégal", "Dakar");
         capitals.put("algérie", "Alger");
         capitals.put("tunisie", "Tunis");
-        capitals.put("libye", "Tripoli");
-        capitals.put("madagascar", "Antananarivo");
-        capitals.put("mozambique", "Maputo");
-        capitals.put("zimbabwe", "Harare");
+        capitals.put("côte d'ivoire", "Yamoussoukro");
         capitals.put("burkina faso", "Ouagadougou");
         capitals.put("mali", "Bamako");
-        capitals.put("niger", "Niamey");
-        capitals.put("tchad", "N'Djamena");
-        capitals.put("soudan", "Khartoum");
-        capitals.put("somalie", "Mogadiscio");
         capitals.put("uganda", "Kampala");
-        capitals.put("rwanda", "Kigali");
-        capitals.put("burundi", "Gitega");
-        capitals.put("zambie", "Lusaka");
-        capitals.put("botswana", "Gaborone");
+        capitals.put("mozambique", "Maputo");
+        capitals.put("zimbabwe", "Harare");
         capitals.put("namibie", "Windhoek");
-        capitals.put("eswatini", "Mbabane");
-        capitals.put("lesotho", "Maseru");
-        capitals.put("côte d'ivoire", "Yamoussoukro");
+        capitals.put("botswana", "Gaborone");
         capitals.put("libéria", "Monrovia");
         capitals.put("sierra leone", "Freetown");
         capitals.put("guinée", "Conakry");
-        capitals.put("guinée bissau", "Bissau");
-        capitals.put("cap vert", "Praia");
-        capitals.put("gambie", "Banjul");
-        capitals.put("togo", "Lomé");
-        capitals.put("bénin", "Porto-Novo");
-        capitals.put("cameroun", "Yaoundé");
+        capitals.put("madagascar", "Antananarivo");
         capitals.put("république centrafricaine", "Bangui");
         capitals.put("république du congo", "Brazzaville");
+        capitals.put("gabon", "Libreville");
+        capitals.put("togo", "Lomé");
+        capitals.put("bénin", "Porto-Novo");
+        capitals.put("rwanda", "Kigali");
+        capitals.put("burundi", "Gitega");
+        capitals.put("soudan", "Khartoum");
+        capitals.put("soudan du sud", "Djouba");
+        capitals.put("libye", "Tripoli");
+        capitals.put("somalie", "Mogadiscio");
         capitals.put("djibouti", "Djibouti");
         capitals.put("érythrée", "Asmara");
-        capitals.put("guinée équatoriale", "Malabo");
-        capitals.put("sao tomé et principe", "São Tomé");
+        capitals.put("gambie", "Banjul");
+        capitals.put("cap-vert", "Praia");
+        capitals.put("guinée bissau", "Bissau");
+        capitals.put("éthiopie", "Addis-Abeba");
         capitals.put("comores", "Moroni");
+        capitals.put("sao tomé et principe", "São Tomé");
         capitals.put("seychelles", "Victoria");
-        capitals.put("maurice", "Port Louis");
-        capitals.put("gabon", "Libreville");
-        capitals.put("angola", "Luanda");
-        capitals.put("soudan du sud", "Djouba");
-        capitals.put("libéria", "Monrovia");
-        capitals.put("côte d'ivoire", "Yamoussoukro");
+        capitals.put("malawi", "Lilongwe");
+        capitals.put("zambie", "Lusaka");
+        capitals.put("eswatini", "Mbabane");
+        capitals.put("lesotho", "Maseru");
+        capitals.put("mauritanie", "Nouakchott");
+        capitals.put("tchad", "N'Djamena");
         capitals.put("république démocratique du congo", "Kinshasa");
 
     }
 
-    // Liste des clients connectés
+    // Liste synchronisée des clients connectés
     private static final Set<String> connectedClients = Collections.synchronizedSet(new HashSet<>());
 
     public static void main(String[] args) {
@@ -80,14 +76,19 @@ public class AfricaCapitalServer {
 
             while (true) {
                 Socket clientSocket = serverSocket.accept();
-                String clientAddress = clientSocket.getRemoteSocketAddress().toString();
-                connectedClients.add(clientAddress);
 
-                System.out.println(" Client connected: " + clientAddress);
+                // Récupérer IP et port du client
+                String clientIP = clientSocket.getInetAddress().getHostAddress();
+                int clientPort = clientSocket.getPort();
+                String clientID = clientIP + ":" + clientPort;
+
+                connectedClients.add(clientID);
+
+                System.out.println(" Client connecté: " + clientID);
                 System.out.println("👥 Clients connectés: " + connectedClients);
 
-                // Thread pour gérer le client
-                new Thread(new ClientHandler(clientSocket)).start();
+                // Lancer un thread pour ce client
+                new Thread(new ClientHandler(clientSocket, clientID)).start();
             }
 
         } catch (IOException e) {
@@ -98,14 +99,15 @@ public class AfricaCapitalServer {
     // Classe qui gère un client
     static class ClientHandler implements Runnable {
         private Socket clientSocket;
+        private String clientID;
 
-        public ClientHandler(Socket socket) {
+        public ClientHandler(Socket socket, String clientID) {
             this.clientSocket = socket;
+            this.clientID = clientID;
         }
 
         @Override
         public void run() {
-            String clientAddress = clientSocket.getRemoteSocketAddress().toString();
             try (
                     BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
                     PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true)) {
@@ -113,12 +115,12 @@ public class AfricaCapitalServer {
 
                 String question;
                 while ((question = in.readLine()) != null) {
-                    System.out.println("❓ Question de " + clientAddress + " : " + question);
+                    System.out.println("❓ Question de " + clientID + " : " + question);
 
                     // Normaliser la question
                     String lower = question.toLowerCase();
-
                     boolean found = false;
+
                     for (Map.Entry<String, String> entry : capitals.entrySet()) {
                         if (lower.contains(entry.getKey())) {
                             out.println(
@@ -130,20 +132,20 @@ public class AfricaCapitalServer {
 
                     if (!found) {
                         out.println("❌ Désolé, '" + question + "' n'est pas une capitale africaine connue. Bye!");
-                        break; // on termine la session
+                        break; // fin de la session
                     }
                 }
 
             } catch (IOException e) {
-                System.out.println("⚠️ Client déconnecté: " + clientAddress);
+                System.out.println("⚠️ Problème avec " + clientID);
             } finally {
                 try {
                     clientSocket.close();
                 } catch (IOException ignored) {
                 }
 
-                connectedClients.remove(clientAddress);
-                System.out.println("👋 Session terminée pour " + clientAddress);
+                connectedClients.remove(clientID);
+                System.out.println("👋 Session terminée pour " + clientID);
                 System.out.println("👥 Clients restants: " + connectedClients);
             }
         }
